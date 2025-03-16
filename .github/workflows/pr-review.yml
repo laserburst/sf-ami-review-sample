@@ -1,0 +1,66 @@
+name: Validation Build
+
+on:
+    # The workflow will run whenever an event happens on a pull request
+    pull_request:
+        # The events are that a PR is opened, or when a commit is pushed
+        # to a branch that has an existing pull request
+        types: [opened, synchronize, ready_for_review, reopened]
+        # Runs only on the main branch
+        branches:
+            - main
+
+jobs:
+    review-build:
+        runs-on: ubuntu-latest
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        permissions: 
+            contents: read
+            pull-requests: write
+        steps:
+            # Checkout the repository
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
+
+            # Installing PREREQUISITES - Node, Java, Python, Salesforce CLI, Salesforce Code Analyzer CLI Plugin
+            - name: Ensure node v20 or greater
+              uses: actions/setup-node@v4
+              with:
+                node-version: '>=20'
+
+            - name: Ensure java v11 or greater
+              uses: actions/setup-java@v4
+              with:
+                java-version: '>=11'
+                distribution: 'zulu'
+
+            - name: Ensure python v3.10 or greater
+              uses: actions/setup-python@v5
+              with:
+                python-version: '>=3.10'
+
+            - name: Install Salesforce CLI
+              run: npm install -g @salesforce/cli@latest
+
+            - name: Install Latest Salesforce Code Analyzer CLI Plugin
+              run: sf plugins install code-analyzer@latest
+            
+            - name: Install SF AMI CLI Plugin
+              run: echo y | sf plugins install sf-ami@latest
+
+            - name: Perform Code Review
+              run: |
+                sf ami review diff \
+                  --repo-dir . \
+                  --ai-provider=${{ vars.AI_PROVIDER }} \
+                  --ai-model=${{ vars.AI_MODEL }} \
+                  --ai-token=${{ secrets.AI_TOKEN }} \
+                  --git-provider=GitHub \
+                  --git-token=${{ secrets.GITHUB_TOKEN }} \
+                  --git-owner=${{ github.repository_owner }} \
+                  --git-repo=${{ github.event.repository.name }} \
+                  --pull-request-id=${{ github.event.pull_request.number }} \
+                  --from=${{ github.event.pull_request.head.sha }} \
+                  --to=${{ github.event.pull_request.base.sha }}
