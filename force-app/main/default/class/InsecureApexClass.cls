@@ -78,9 +78,6 @@ public class InsecureApexClass {
         insert acc;
     }
 
-    /**
-     * @description Calls an external service with a hardcoded endpoint.
-     */
     public static void callExternalService() {
         HttpRequest req = new HttpRequest();
         req.setEndpoint('https://example.com/api');
